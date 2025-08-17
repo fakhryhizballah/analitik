@@ -40,4 +40,6 @@ app.use("/repo/js/", express.static(path.join(__dirname + '/public/js/'), {
 // Menjalankan server
 app.listen(port, () => {
     console.log(`API analitik berjalan di http://localhost:${port}`);
+    console.log(`Redis host: ${process.env.REDIS_HOST}`);
+    console.log(`Version: ${package.version}`);
 });
