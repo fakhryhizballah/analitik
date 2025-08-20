@@ -8,21 +8,59 @@ function generateUniqueId() {
 
 function getVisitorId() {
     const visitorIdKey = 'visitor_id_session';
-    let visitorId = sessionStorage.getItem(visitorIdKey);
+    let visitorId = localStorage.getItem(visitorIdKey);
 
     if (!visitorId) {
         visitorId = generateUniqueId();
-        sessionStorage.setItem(visitorIdKey, visitorId);
+        localStorage.setItem(visitorIdKey, visitorId);
     }
 
     return visitorId;
 }
-
 const currentVisitorId = getVisitorId();
-console.log('Session Visitor ID:', currentVisitorId);
+let getHostname = new URL(window.location);
+async function sha256(text) {
+    const buf = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(text)
+    );
+    return Array.from(new Uint8Array(buf))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
 
+async function trackVisitor(host, visitorId) {
+    fetch('https://count.spairum.my.id/api/track/unique', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ host, visitorId })
+    })
+
+}
+console.log('Session Visitor ID:', currentVisitorId);
+async function trak(host) {
+    let keyCookie = await sha256(host);
+    const cookieExists = document.cookie.split(';').some(item => item.trim().startsWith(`${keyCookie}=`));
+    if (!cookieExists) {
+        trackVisitor(host, currentVisitorId);
+        document.cookie = `${keyCookie}=${currentVisitorId}; path=/; max-age=86400;`;
+    }
+}
 // Ganti 'websiteanda.com' dengan host yang sebenarnya
-const host = window.location.hostname;
-trackVisitor(host, currentVisitorId);
-console.log('Host:', host);
-console.log('Visitor ID:', currentVisitorId);
+trak(getHostname.hostname);
+trak(getHostname.hostname + getHostname.pathname);
+
+
+function getTrackUnique(host) {
+    return fetch('https://count.spairum.my.id/api/analytics/unique/' + host, {
+    }).then((response) => response.json());
+
+}
+// format date: YYYY-MM-DD;
+function getTrackbyDate(host, date) {
+    return fetch('https://count.spairum.my.id/api/analytics/track/' + host + '/' + date, {
+    }).then((response) => response.json());
+
+}
