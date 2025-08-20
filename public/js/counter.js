@@ -50,7 +50,7 @@ async function trak(host) {
 }
 // Ganti 'websiteanda.com' dengan host yang sebenarnya
 trak(getHostname.hostname);
-trak(getHostname.hostname + getHostname.pathname);
+trak(getHostname.hostname + '-' + getHostname.pathname.split('/')[1]);
 
 
 function getTrackUnique(host) {
