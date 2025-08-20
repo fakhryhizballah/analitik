@@ -47,7 +47,7 @@ module.exports = {
             // Looping 24 jam dalam sehari
             for (let i = 0; i < 24; i++) {
                 const hour = i.toString().padStart(2, '0');
-                const hourlyKey = `unique_visitors:${host}:${date}:${hour}`;
+                const hourlyKey = `unique_visitors:${host}:${date}-${hour}`;
                 const count = await req.redisClient.scard(hourlyKey);
 
                 hourlyData.push({
