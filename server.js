@@ -34,6 +34,9 @@ app.use("/repo/js/", express.static(path.join(__dirname + '/public/js/'), {
         res.set('ETag', package.version); // add etag
     }
 }));
+app.use("/", express.static(path.join(__dirname + '/view'), {
+
+}))
 // app.use((req, res, next) => {
 //     res.status(404).sendFile(path.join(__dirname, '/public/404.html'));
 // });
