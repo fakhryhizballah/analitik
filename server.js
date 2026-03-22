@@ -5,7 +5,7 @@ const Redis = require('ioredis');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-
+const { InfluxDB, Point } = require('@influxdata/influxdb-client')
 const app = express();
 const port = process.env.PORT || 3100;
 
@@ -16,6 +16,13 @@ const redisClient = new Redis({
     password: process.env.REDIS_PASSWORD,
     db: process.env.REDIS_DB
 });
+const token = process.env.INFLUXDB_TOKEN
+const url = process.env.INFLUXDB_URL
+let org = process.env.INFLUXDB_ORG
+let bucket = process.env.INFLUXDB_BUCKET
+
+const clientInfluxDB = new InfluxDB({ url, token })
+
 
 const maxAge = process.env.NODE_ENV == 'production' ? 10800 : 1;
 const package = JSON.parse(fs.readFileSync('package.json'));
@@ -46,3 +53,32 @@ app.listen(port, () => {
     console.log(`Redis host: ${process.env.REDIS_HOST}`);
     console.log(`Version: ${package.version}`);
 });
+
+async function findBucket() {
+    const today = new Date();
+    const hour = today.getHours().toString().padStart(2, '0');
+    const menit = today.getMinutes().toString().padStart(2, '0');
+    let data = await redisClient.keys('views:*')
+    console.log(data);
+    let writeClient = clientInfluxDB.getWriteApi(org, bucket)
+    for (let x of data) {
+        let url = x.replace('views:', '')
+        console.log(url);
+
+        let value = await redisClient.get(`time:${hour}:${menit}:${url}`)
+        if (value == null) {
+            value = 0
+        }
+
+        const point = new Point('counter_views')
+            .tag('url', url)
+            .intField('views', value);
+        writeClient.writePoint(point);
+
+    }
+    writeClient.close().then(() => {
+        console.log('WRITE FINISHED')
+    })
+
+}
+setInterval(findBucket, 12000);

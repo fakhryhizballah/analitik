@@ -1,4 +1,35 @@
 module.exports = {
+    trackView: async (req, res) => {
+        const { host } = req.body;
+        const today = new Date();
+        const hour = today.getHours().toString().padStart(2, '0');
+        const menit = today.getMinutes().toString().padStart(2, '0');
+
+        if (!host) {
+            return res.status(400).send({ error: 'Parameter "host" is required.' });
+        }
+
+        try {
+            const view = `views:${host}`;
+            const key = `time:${hour}:${menit}:${host}`;
+            let result = await req.redisClient.incr(view);
+            await req.redisClient.incr(key);
+            await req.redisClient.expire(key, 80);
+
+
+            res.status(200).send({
+                message: `views:${host}`,
+                views: result.toLocaleString('id-ID'),
+                hour: `${hour}:${menit}`
+            });
+
+        }
+        catch (error) {
+            console.error('Error:', error);
+            return res.status(500).send({ error: 'Internal Server Error' });
+        }
+
+    },
     trackUniqueVisitor: async (req, res) => {
         const { host, visitorId } = req.body;
 
