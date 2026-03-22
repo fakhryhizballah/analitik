@@ -77,7 +77,7 @@ async function views(){
         })
         result = await result.json();
         console.log(result);
-        document.cookie = `${host}=${result.views}; path=/; max-age=86400;`;
+        document.cookie = `${host}=${result.views}; path=/; max-age=1m;`;
     }
 
 }
