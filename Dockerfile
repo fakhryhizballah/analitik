@@ -26,3 +26,4 @@ EXPOSE 3000
 
 # Perintah untuk menjalankan aplikasi saat container diluncurkan
 CMD ["npm", "start"]
+CMD ["node", "jobs.js"]
