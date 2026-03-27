@@ -18,6 +18,7 @@ COPY package*.json ./
 # Instal semua dependensi
 RUN npm install
 
+RUN npm install -g pm2
 # Salin semua file proyek Anda ke dalam container
 COPY . .
 
@@ -25,4 +26,4 @@ COPY . .
 EXPOSE 3000
 
 # Perintah untuk menjalankan aplikasi saat container diluncurkan
-CMD ["npm", "start"]
+CMD ["npm", "run", "pm2", "jobs.js", "server.js"]
