@@ -5,7 +5,7 @@ const Redis = require('ioredis');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { InfluxDB, Point } = require('@influxdata/influxdb-client')
+
 const app = express();
 const port = process.env.PORT || 3100;
 
@@ -16,13 +16,6 @@ const redisClient = new Redis({
     password: process.env.REDIS_PASSWORD,
     db: process.env.REDIS_DB
 });
-const token = process.env.INFLUXDB_TOKEN
-const url = process.env.INFLUXDB_URL
-let org = process.env.INFLUXDB_ORG
-let bucket = process.env.INFLUXDB_BUCKET
-
-const clientInfluxDB = new InfluxDB({ url, token })
-
 
 const maxAge = process.env.NODE_ENV == 'production' ? 10800 : 1;
 const package = JSON.parse(fs.readFileSync('package.json'));
