@@ -5,6 +5,7 @@ const Redis = require('ioredis');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const connectDB = require('./config/db');
 
 const app = express();
 const port = process.env.PORT || 3100;
@@ -19,6 +20,7 @@ const redisClient = new Redis({
 
 const maxAge = process.env.NODE_ENV == 'production' ? 10800 : 1;
 const package = JSON.parse(fs.readFileSync('package.json'));
+connectDB();
 app.use(cors());
 // Middleware untuk parsing body JSON
 app.use(express.json());
