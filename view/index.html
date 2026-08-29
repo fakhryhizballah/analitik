@@ -124,36 +124,198 @@
 
     <script>
         let chart = null;
+        let getParameter = new URLSearchParams(window.location.search);
+        let url = getParameter.get('url');
+        console.log(url);
+
+        if (url) {
+            document.getElementById('hostUrl').value = url;
+        }
+
 
         function changePeriod() {
             const period = document.getElementById('period').value;
             const dateInput = document.getElementById('dateInput');
             const dateLabel = document.getElementById('dateLabel');
             const apiEndpoint = document.getElementById('apiEndpoint');
+            let year = new Date().getFullYear();
+            let month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+            let day = new Date().getDate().toString().padStart(2, '0');
             
-            // Update input type and label based on period
+            // Update API endpoint based on period
             switch(period) {
                 case 'harian':
                     dateInput.type = 'date';
                     dateLabel.textContent = 'Tanggal';
-            
+                    dateInput.value = `${year}-${month}-${day}`;
                     break;
                 case 'bulanan':
                     dateInput.type = 'month';
-                    dateInput.value = '2025-05';
                     dateLabel.textContent = 'Bulan';
-        
+                     dateInput.min = '2026-01';
+                    dateInput.value = `${year}-${month}`;
                     break;
                 case 'tahunan':
                     dateInput.type = 'number';
-                    dateInput.min = '2025';
+                    dateInput.min = '2026';
                     dateLabel.textContent = 'Tahun';
-            
+                    dateInput.value = `${year}`;
                     break;
             }
+            
+            // Update input type and label based on period
+            // switch(period) {
+            //     case 'harian':
+            //         dateInput.type = 'date';
+            //         dateLabel.textContent = 'Tanggal';
+            
+            //         break;
+            //     case 'bulanan':
+            //         dateInput.type = 'month';
+            //         dateInput.value = '2025-05';
+            //         dateLabel.textContent = 'Bulan';
+        
+            //         break;
+            //     case 'tahunan':
+            //         dateInput.type = 'number';
+            //         dateInput.min = '2026';
+            //         dateLabel.textContent = 'Tahun';
+            
+            //         break;
+            // }
         }
+        // Form submission handler
+        document.getElementById('analyticsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            showLoading(true);
+            document.getElementById('errorContainer').classList.add('hidden');
+            
+            const hostUrl = document.getElementById('hostUrl').value;
+            const dateInput = document.getElementById('dateInput').value;
+            
+            try {
+                // Simulate API call delay (opsional, bisa dihapus)
+                // await new Promise(resolve => setTimeout(resolve, 1500));  
+                
+                console.log("Host:", hostUrl);
+                console.log("Date:", dateInput);
 
-        function showLoading(show) {
+                // [PERBAIKAN DI SINI]
+                // Menyusun query parameter sesuai path yang baru
+                const queryParams = new URLSearchParams();
+                if (hostUrl) queryParams.append('url', hostUrl);
+                if (dateInput) queryParams.append('date', dateInput);
+
+                const apiUrl = `/api/counters/analytics?${queryParams.toString()}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Pastikan struktur response data backend sesuai dengan 
+                // ekspektasi fungsi displayResults() (misal: memiliki array hourly_unique_visitors)
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Terjadi kesalahan saat mengambil data analytics. Silakan coba lagi.');
+            } finally {
+                showLoading(false);
+            }
+        });
+        function displayResults(data, period) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    const totalVisitors = document.getElementById('totalVisitors');
+    const peakHour = document.getElementById('peakHour');
+    const avgPerHour = document.getElementById('avgPerHour');
+    
+    // label analytics fleksibel: data.analytics (array berisi { label, unique_visitors })
+    const analyticsData = data.analytics || [];
+    
+    let total = 0;
+    let maxVisitors = 0;
+    let peakLabel = '';
+    
+    analyticsData.forEach(item => {
+        total += item.unique_visitors;
+        if (item.unique_visitors > maxVisitors) {
+            maxVisitors = item.unique_visitors;
+            peakLabel = item.label;
+        }
+    });
+    
+    const average = analyticsData.length > 0 
+        ? Math.round((total / analyticsData.length) * 10) / 10 
+        : 0;
+    
+    totalVisitors.textContent = total.toLocaleString();
+    peakHour.textContent = peakLabel || '-';
+    avgPerHour.textContent = average;
+    
+    resultsContainer.classList.remove('hidden');
+    
+    // Render chart dengan periode dinamis
+    createChart(analyticsData, period);
+}
+
+function createChart(analyticsData, period) {
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    
+    if (chart) {
+        chart.destroy();
+    }
+
+    // Konfigurasi teks dinamis berdasarkan periode
+    let chartTitle = 'Pengunjung Unik per Jam';
+    let datasetLabel = 'Pengunjung Unik';
+
+    if (period === 'bulanan') {
+        chartTitle = 'Pengunjung Unik per Tanggal';
+    } else if (period === 'tahunan') {
+        chartTitle = 'Pengunjung Unik per Bulan';
+    }
+
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: analyticsData.map(item => item.label),
+            datasets: [{
+                label: datasetLabel,
+                data: analyticsData.map(item => item.unique_visitors),
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: chartTitle
+                },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+}
+function showLoading(show) {
             const submitBtn = document.getElementById('submitBtn');
             const submitText = document.getElementById('submitText');
             const loadingSpinner = document.getElementById('loadingSpinner');
@@ -184,134 +346,6 @@
             }, 5000);
         }
 
-        function displayResults(data) {
-            const resultsContainer = document.getElementById('resultsContainer');
-            const totalVisitors = document.getElementById('totalVisitors');
-            const peakHour = document.getElementById('peakHour');
-            const avgPerHour = document.getElementById('avgPerHour');
-            
-            // Calculate statistics
-            let total = 0;
-            let maxVisitors = 0;
-            let maxHour = '';
-            
-            data.hourly_unique_visitors.forEach(item => {
-                total += item.unique_visitors;
-                if (item.unique_visitors > maxVisitors) {
-                    maxVisitors = item.unique_visitors;
-                    maxHour = item.hour;
-                }
-            });
-            
-            const average = Math.round(total / data.hourly_unique_visitors.length * 10) / 10;
-            
-            // Update stats
-            totalVisitors.textContent = total.toLocaleString();
-            peakHour.textContent = maxHour || '-';
-            avgPerHour.textContent = average;
-            
-            // Show results
-            resultsContainer.classList.remove('hidden');
-            
-            // Create chart
-            createChart(data.hourly_unique_visitors);
-        }
-
-        function createChart(hourlyData) {
-            const ctx = document.getElementById('analyticsChart').getContext('2d');
-            
-            // Destroy existing chart if it exists
-            if (chart) {
-                chart.destroy();
-            }
-            
-            chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: hourlyData.map(item => item.hour),
-                    datasets: [{
-                        label: 'Pengunjung Unik',
-                        data: hourlyData.map(item => item.unique_visitors),
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Pengunjung Unik per Jam'
-                        },
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Form submission handler
-        document.getElementById('analyticsForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            showLoading(true);
-            document.getElementById('errorContainer').classList.add('hidden');
-            
-            const hostUrl = document.getElementById('hostUrl').value;
-            const period = document.getElementById('period').value;
-            const dateInput = document.getElementById('dateInput').value;
-            
-            // Prepare request data
-            const requestData = {
-                host: hostUrl
-            };
-            
-            switch(period) {
-                case 'harian':
-                    requestData.date = dateInput;
-                    break;
-                case 'bulanan':
-                    requestData.month = dateInput;
-                    break;
-                case 'tahunan':
-                    requestData.year = parseInt(dateInput);
-                    break;
-            }
-            
-            try {
-                // Simulate API call with sample data
-                await new Promise(resolve => setTimeout(resolve, 1500));  
-                
-                // displayResults(sampleData);
-                console.log(hostUrl);
-                console.log(dateInput);
-                // Real API call would be:
-                const response = await fetch(`/api/analytics/track/${hostUrl}/${dateInput}`, {
-                    method: 'GET'
-                });
-                const data = await response.json();
-                displayResults(data);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Terjadi kesalahan saat mengambil data analytics. Silakan coba lagi.');
-            } finally {
-                showLoading(false);
-            }
-        });
-
-        // Initialize with default period
-        changePeriod();
     </script>
 </body>
 </html>

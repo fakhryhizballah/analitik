@@ -10,6 +10,7 @@ router.get('/analytics/track/:host/:date', controller.trackVisitor);
 
 router.post('/counter/view', counters.postView);
 router.get('/counters/view', counters.getPageViews);
+router.get('/counters/analytics', counters.getPageViewsAnalytics);
 
 
 module.exports = router;
