@@ -62,7 +62,7 @@ module.exports = {
 
     try {
         // Catatan: Pada schema Anda mengekspor 'Logger' tapi di kode awal menggunakan 'Page'
-        const count = await Logger.countDocuments(query);
+        const count = await Page.countDocuments(query);
         
         // Diubah menjadi 200 (OK) karena ini adalah operasi GET, bukan POST (201 Created)
         return res.status(200).json({
