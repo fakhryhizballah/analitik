@@ -20,26 +20,59 @@ module.exports = {
         });
     },
     getPageViews: async (req, res) => {
-        console.log(req.query.url);
-        if (!req.query.url) {
-            return res.status(400).json({
-                message: 'Bad Request'
-            });
-        }
+        const { url, date } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ message: 'Bad Request: url is required' });
+    }
+
+    // Base query
+    const query = { url };
+
+    // Dynamic date handling
+    if (date) {
+        const parts = date.split('-');
+        let start, end;
+
         try {
-            const page = await Page.countDocuments({
-                url: req.query.url
-            });
-            return res.status(201).json({
-                message: req.query.url,
-                data: page
-            });
-        } catch (error) {
-            console.log(error);
-            return res.status(500).json({
-                message: 'Internal Server Error'
-            });
+            if (parts.length === 1) { 
+                // Format: YYYY
+                start = new Date(parts[0], 0, 1);
+                end = new Date(Number(parts[0]) + 1, 0, 1);
+            } else if (parts.length === 2) { 
+                // Format: YYYY-MM
+                start = new Date(parts[0], Number(parts[1]) - 1, 1);
+                end = new Date(parts[0], Number(parts[1]), 1);
+            } else if (parts.length === 3) { 
+                // Format: YYYY-MM-DD
+                start = new Date(parts[0], Number(parts[1]) - 1, Number(parts[2]));
+                end = new Date(parts[0], Number(parts[1]) - 1, Number(parts[2]) + 1);
+            } else {
+                return res.status(400).json({ message: 'Invalid date format. Use YYYY, YYYY-MM, or YYYY-MM-DD' });
+            }
+
+            // Validasi apakah instansiasi date berhasil (mencegah NaN)
+            if (isNaN(start.getTime())) throw new Error('Invalid Date object');
+
+            query.viewedAt = { $gte: start, $lt: end };
+        } catch (e) {
+            return res.status(400).json({ message: 'Invalid date value provided' });
         }
+    }
+
+    try {
+        // Catatan: Pada schema Anda mengekspor 'Logger' tapi di kode awal menggunakan 'Page'
+        const count = await Logger.countDocuments(query);
+        
+        // Diubah menjadi 200 (OK) karena ini adalah operasi GET, bukan POST (201 Created)
+        return res.status(200).json({
+            message: url,
+            data: count
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
     }
 
 }
